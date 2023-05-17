@@ -1,0 +1,107 @@
+---
+version: "3"
+services:
+  eureka-server:
+    build: "eureka-server"
+    volumes:
+    - "maven_repo:/root/.m2"
+  customer-core:
+    build: "customer-core"
+    image: "lakesidemutual/customer-core"
+    environment:
+    - "EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka"
+    - "SPRING_PROFILES_ACTIVE=eureka"
+    volumes:
+    - "maven_repo:/root/.m2"
+    depends_on:
+    - "eureka-server"
+  customer-management-backend:
+    build: "customer-management-backend"
+    image: "lakesidemutual/customer-management-backend"
+    environment:
+    - "EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka"
+    - "SPRING_PROFILES_ACTIVE=eureka"
+    volumes:
+    - "maven_repo:/root/.m2"
+    depends_on:
+    - "customer-core"
+  customer-management-frontend:
+    build: "customer-management-frontend"
+    image: "lakesidemutual/customer-management-frontend"
+    environment:
+    - "REACT_APP_CUSTOMER_MANAGEMENT_BACKEND=http://customer-management-backend:8100"
+    volumes:
+    - "node_modules:/usr/src/app/node_modules"
+    depends_on:
+    - "customer-management-backend"
+  customer-self-service-backend:
+    build: "customer-self-service-backend"
+    image: "lakesidemutual/customer-self-service-backend"
+    environment:
+    - "EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka"
+    - "SPRING_PROFILES_ACTIVE=eureka"
+    - "POLICYMANAGEMENT_TCPBROKERBINDADDRESS=tcp://policy-management-backend:61616"
+    volumes:
+    - "maven_repo:/root/.m2"
+    depends_on:
+    - "customer-core"
+    - "policy-management-backend"
+  customer-self-service-frontend:
+    build: "customer-self-service-frontend"
+    image: "lakesidemutual/customer-self-service-frontend"
+    environment:
+    - "REACT_APP_CUSTOMER_SELF_SERVICE_BACKEND=http://customer-self-service-backend:8080"
+    - "REACT_APP_POLICY_MANAGEMENT_BACKEND=http://policy-management-backend:8090"
+    - "REACT_APP_CUSTOMER_MANAGEMENT_BACKEND=http://customer-management-backend:8100"
+    volumes:
+    - "node_modules:/usr/src/app/node_modules"
+    depends_on:
+    - "customer-self-service-backend"
+    - "customer-management-backend"
+    - "policy-management-backend"
+  policy-management-backend:
+    build: "policy-management-backend"
+    image: "lakesidemutual/policy-management-backend"
+    environment:
+    - "EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka"
+    - "SPRING_PROFILES_ACTIVE=eureka"
+    volumes:
+    - "maven_repo:/root/.m2"
+    depends_on:
+    - "customer-core"
+  policy-management-frontend:
+    build: "policy-management-frontend"
+    image: "lakesidemutual/policy-management-frontend"
+    environment:
+    - "VUE_APP_POLICY_MANAGEMENT_BACKEND=http://policy-management-backend:8090"
+    volumes:
+    - "node_modules:/usr/src/app/node_modules"
+    depends_on:
+    - "policy-management-backend"
+  spring-boot-admin:
+    build: "spring-boot-admin"
+    image: "lakesidemutual/spring-boot-admin"
+    environment:
+    - "EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka"
+    - "SPRING_PROFILES_ACTIVE=eureka"
+    volumes:
+    - "maven_repo:/root/.m2"
+    depends_on:
+    - "eureka-server"
+  risk-management-server:
+    build: "risk-management-server"
+    image: "lakesidemutual/risk-management-server"
+    environment:
+    - "activeMQ.host=policy-management-backend"
+    - "activeMQ.port=61613"
+    volumes:
+    - "node_modules:/usr/src/app/node_modules"
+    depends_on:
+    - "policy-management-backend"
+  apigateway:
+    build: "apigateway"
+    ports:
+    - "80:80"
+volumes:
+  maven_repo: null
+  node_modules: null
